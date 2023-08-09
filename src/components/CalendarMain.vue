@@ -1,18 +1,22 @@
 <template>
-  <div class="fixed inset-10 flex flex-col bg-white rounded-lg shadow-lg p-5">
-    <div>{{ positions }}</div>
-    <div class="relative bg-green-300 grow">
+  <div
+    class="fixed inset-20 flex flex-col rounded-xl shadow-xl p-5 bg-gradient-to-b from-gray-700 to-gray-600"
+  >
+    <!-- <div>{{ positions }}</div> -->
+    <div class="relative grow flex">
       <div
-        class="
-          absolute
-          bg-red-500/30
-          truncate
-          border border-gray-800
-          rounded-full
-          px-2
-        "
-        v-for="(appointment, i) in sortedAppointments"
-        :key="JSON.stringify(appointment)"
+        class="even:bg-gray-900/50 odd:bg-gray-900/30 w-full grid place-items-end text-yellow-300 text-sm rounded-lg"
+        v-for="i in delta"
+      >
+        <span class="-rotate-45 translate-x-1/2">
+          {{ i + startCalendar }}:00h</span
+        >
+      </div>
+
+      <div
+        class="absolute bg-emerald-500/30 shadow-md shadow-emerald-500/20 truncate border-2 border-current rounded-lg px-2 py-5 text-center text-emerald-600"
+        v-for="(interval, i) in sortedIntervals"
+        :key="JSON.stringify(interval)"
         :style="positions[i]"
       >
         appointment {{ i + 1 }}
@@ -22,59 +26,67 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { ref, computed } from "vue";
 
 const startCalendar = ref(10);
 const endCalendar = ref(18);
 const delta = computed(() => endCalendar.value - startCalendar.value);
 
-const appointments = ref([
+const intervals = ref([
   [10, 11],
-  [12, 13],
-  [12, 14],
-  [13, 15],
+  [10.5, 13],
+  [10.6, 13.5],
+  [12.5, 14],
   [14, 15],
-  [16, 18],
+  [14.5, 16],
+  [16.25, 16.75],
+  [17, 18],
 ]);
 
-const sortedAppointments = computed(() => {
-  return appointments.value.sort((a, b) => {
+const sortedIntervals = computed(() => {
+  return intervals.value.sort((a, b) => {
     return a[0] - b[0];
   });
 });
 
-const positions = computed(() => {
-  return sortedAppointments.value.map(([start, end], i, arr) => {
-    const left = ((start - startCalendar.value) / delta.value) * 100;
-    const right = ((endCalendar.value - end) / delta.value) * 100;
-
-    return { left: `${left}%`, right: `${right}%` };
-  });
-  /*  .reduce(function (total, value, i) {
-      const arr = sortedAppointments.value;
-      const collision = hasCollision(arr[i], arr[i - 1]);
-      const row = collision ? total[i - 1].row + 1 : total[i - 1]?.row ?? 0;
-      const top = `${row * 40}px`;
-
-      total.push({ ...value, top, collision, row });
+const rows = computed(() => {
+  return sortedIntervals.value.reduce((total, value, index, arr) => {
+    if (index === 0) {
+      value.push(0);
       return total;
-    }, []);*/
+    }
+
+    for (let i = 0; i < index; i++) {
+      const collision = hasCollision(index, i, arr);
+      const prev = total[index - 1][2];
+      if (collision) {
+        value[2] = prev + 1;
+      } else {
+        value[2] = 0;
+      }
+    }
+
+    return total;
+  }, sortedIntervals.value);
 });
 
-function hasCollision(index, compareIndex, arr) {
-  const current = arr[index];
-  const compare = arr[compareIndex];
-  const start = current?.[0];
-  const compareEnd = compare?.[1];
-  return compareEnd - start > 0;
-}
+const positions = computed(() => {
+  return rows.value.map(([start, end, row], i, arr) => {
+    const left = ((start - startCalendar.value) / delta.value) * 100;
+    const right = ((endCalendar.value - end) / delta.value) * 100;
+    const top = row * 4.5;
+    return {
+      left: `${left}%`,
+      right: `${right}%`,
+      top: `${top}rem`,
+    };
+  });
+});
 
-function determineRow(index, arr) {
-  if (index === 0) return 0;
-  if (hasCollision(index, 0, arr)) {
-    if (index === 1) return 1;
-    return arr[i - 1].row + 1;
-  }
-  return 0;
+function hasCollision(startIndex: number, endIndex: number, arr: any) {
+  const start = arr?.[startIndex]?.[0];
+  const end = arr?.[endIndex]?.[1];
+  // console.log(start, end, start - end);
+  return start - end < 0;
 }
 </script>
